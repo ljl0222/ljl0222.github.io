@@ -25,6 +25,12 @@ platforms:
   #   type: QQ
   #   icon: "fab fa-qq"
   #   link: "http://connect.qq.com/widget/shareqq/index.html?url=URL&title=TITLE"
+
+  -
+    type: QZone
+    icon: "fab fa-qq"
+    link: "http://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=URL&title=TITLE"
+
   -
     type: Weibo
     icon: "fab fa-weibo"
