@@ -11,7 +11,7 @@ mermaid: true
 原文链接：[The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)
 
 他人博客：
-- [10min·脑图·第1期 | 清华博后带你轻松吃透Prompt Tuning顶会论文【OpenBMB论文速读】](https://www.bilibili.com/video/BV18P411E7VK)
+- [10min·脑图·第1期 \| 清华博后带你轻松吃透Prompt Tuning顶会论文【OpenBMB论文速读】](https://www.bilibili.com/video/BV18P411E7VK)
 
 - [The Power of Scale for Parameter-Efficient Prompt Tuning及prefix tuning与prompt tuning的区别](https://www.ngui.cc/article/show-349216.html)
 
