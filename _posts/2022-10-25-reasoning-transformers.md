@@ -8,6 +8,10 @@ math: true
 mermaid: true
 ---
 
+原文链接：[Disentangling Reasoning Capabilities from Language Models with
+Compositional Reasoning Transformers](https://arxiv.org/pdf/2210.11265v1.pdf)
+
+
 ## 摘要
 
 - 提出了一个统一的推理框架ReasonFormer，反映人类在复杂决策当中的**模块化**和复合推理过程
@@ -36,6 +40,8 @@ mermaid: true
 
 - 整个推理框架用一个模型解决多个任务，可以seq2seq的进行训练和推理
 
+## 推理能力制定
+
 具体的来说，整个模型貌似分为下述四个模块：
 
 - 表示模块：用多个transformer层来学习上下文语义和对问题的直观理解
@@ -57,3 +63,75 @@ mermaid: true
 - 自然语言推理(**NLI**)
 
 - **general skill**：在选定的技能当中学习共同的知识
+
+## 模型框架
+
+![Desktop View](/assets/img/posts/2022-10-25-reasoning-transformers/framework.png)
+
+整个模型的框架如图所示，使用了encoder-decoder的结构来对不同的推理任务进行处理。需要说明的是，对于ReasonFormer，所有的任务我们都采用统一的模型进行处理，首先会将所有的任务转换为text2text的文本生成任务，使用hard prompt的方式进行格式的转换。这里其实是一个比较粗暴简单的方法，作者举了一个这样的例子：
+
+> The question is { Question }. Please give a answer:
+
+### Representation Module
+
+基于transformer的LM展示不错的上下文的表征能力，于是我们将长度为m的表计划的输入X输入到模型当中，表示模块当中我们学到的初始表示是：
+
+$$H^0=\{h^0_{[CLS]},h^0_1,h^0_2,...,h^0_m\}$$
+
+总结一下，作者把输入直接丢进一堆transformer层当中，然后觉得没有什么好讲的了。
+
+### Reasoning Module
+
+对于推理模块，采用模块化和组合的方式，推理模块学习在预训练当中指定的不同推理技能，并在下游与adapter和reasoning router自动组合。这里需要说明的是，对于推理模块，其不仅仅在并行层面上有组合性，在级联层面上由于多步推理的存在，也有相关组合性。
+
+对于同一推理技能在不同的步骤的共享或私有主模块参数，文章当中提出了两种推理模块（虽然感觉分类的很草率，但是看在他后面讲解了，还是简单看看8）：
+
+- 共享推理模块(**shared reasoning modules**)
+
+- 私有推理模块(**private reasoning modules**)
+
+以上的每个模块都由若干个transformer层组成（不知道包不包括下面的）。
+
+当然，整个RM当中还包括一些其他部分：
+
+- reasoning router
+
+- pre-training and adapter
+
+#### Reasoning Router
+
+对于每个实例，所需要的能力和推理深度是不同的，因此，我们需要推理路由器决定每个推理步骤需要激活哪些技能。在并行层，技能路由器(**skill router**)计算每个推理步骤当中推理模块的激活分数。在每个推理步骤之后，停止门(**stop gate**)决定执行的推理步骤是否足以解决问题。
+
+##### Skill Router
+
+对于第i个推理步骤当中的n个推理模块：$R^1,...,R^n$和一个技能路由器$S^i$，我们可以通过路由器加权的n个推理模块的平均输出$H^i$来计算第i个推理步骤的输出。
+
+$$H^i=\sum_{j=1}^{k}S^i(\hat{H}^{i-1})_jR_j(H^{i-1})$$
+
+其中右边的两个因式分别来自于路由器和第j个推理模块的输出。
+
+决定每个步骤的推理技能是一项非平凡的任务，我们采用了一个相对复杂的路由器来进行更深入的理解。我们首先使用一个Transformer层T来将原始输出做映射：
+
+$$\hat{H}^{i-1}=T(H^{i-1})$$
+
+最后，我们再使用FFN（前馈神经网络）和Softmax函数进行加权评分计算：
+
+$$S^i(\hat{H}^{i-1})=Softmax(FFN(\hat{H}^{i-1}))$$
+
+##### Stop Gate
+
+在每一个推理步骤结束后，停止门决定当前推理深度能否足以解决问题，使用第i个推理层的输出$H^i$作为输入，使用残量门控机制来控制所执行步骤的信息流。（不懂）
+
+$$\tilde{H}^i=H^{i-1}+G^i_{stop}(H^i)$$
+
+我们使用FFN层作为停止门，当推理过程足够充分的时候，使用停止门计算较小的权重来软停后续过程。
+
+#### Shared Reasoning Modules
+
+如最上面的模型图所示，不同推理深度，对于相同的推理技能来说，具有共同的共享参数。最后一个推理步骤的输出将会在特定步骤的adapter下递归的重用于特定的推理模块的输入。
+
+有关Reasoning Adapter，为了使重用的推理模块适应推理过程的不同深度，我们在推理过程中添加了特定于步骤的推理adapter。而对于不同技能和不同推理深度的adapter是非共享的。
+
+#### Private Reasoning Modules
+
+与共享推理模块不同的是，由于私有的推理模块在不同推理深度的模块参数是非共享的，因此不需要使用adapter，如图2所示，私有推理模块级联，前一步推理的输出直接作为下一步推理的输入。
