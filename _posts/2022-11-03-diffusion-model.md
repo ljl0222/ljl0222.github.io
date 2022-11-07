@@ -136,7 +136,7 @@ $$
 
 在diffusion的过程当中，我们可以得到从$x_0$推导到$x_t$的过程，由此类似的，我们应该可以得到从$x_t$反推到$x_0$的公式，这里我们也很容易就可以给出这样的表达式(8)：
 
-$$x_0=\frac{1}{\sqrt{\bar{\alpha_{t}}}}(x_t-\sqrt{1-\bar{\alpha_{t}}\tilde{Z}}) \tag{8}$$
+$$x_0=\frac{1}{\sqrt{\bar{\alpha_{t}}}}(x_t-\sqrt{1-\bar{\alpha_{t}}}\tilde{Z}) \tag{8}$$
 
 在式(8)引领下，我们可以给出这样的训练过程：
 
@@ -144,11 +144,11 @@ $$x_0=\frac{1}{\sqrt{\bar{\alpha_{t}}}}(x_t-\sqrt{1-\bar{\alpha_{t}}\tilde{Z}}) 
 
 我们在这里首先由采样的噪声$Z$和原图像$x_0$，根据公式(7)推得$x_t$，再将$x_t$送入UNet网络当中，通过UNet去预测噪声$\tilde{Z}$，并且最终比较$Z$与$\tilde{Z}$，通过这样的方式完成训练。（需要注意的是，这里我们的输入除了$x_t$还有$t$，我们需要告诉UNet这是第几步去噪）
 
-$$\tilde{Z}=Unet(x_t,t) \tag{9}$$
+$$\tilde{Z}=UNet(x_t,t) \tag{9}$$
 
-从直觉上来讲，或者说显而易见的是，我们这样的训练过程得到的是一步reverse的过程，根据实际的实验结果显示，这样一步重建的过程并不是很清晰，效果不好。我们实际上的训练过程是采用一步步的reverse。
+从直觉上来讲，或者说显而易见的是，我们这样的训练过程得到的是一步reverse到$x_0$的过程，根据实际的实验结果显示，这样一步重建的过程并不是很清晰，效果不好。我们实际上的训练过程是采用一步步的reverse。
 
-![Desktop View](/assets/img/posts/2022-11-03-diffusion-model/reverse.png)
+![Desktop View](/assets/img/posts/2022-11-03-diffusion-model/reverse_2.png)
 
 因此在这里，从后到前的，我们希望由第$t$步推导出第$t-1$步的噪声图像，从而步步推导至$x_0$。即，我们想要求得的是一个这样的表达式：
 
@@ -164,7 +164,7 @@ $$x_{t-1}=f(x_t,\tilde{Z})$$
 
 $$q(x_{t-1}\mid{x_t})=\frac{q(x_{t},{x_{t-1}})q(x_{t-1})}{q(x_{t})} \tag{10}$$
 
-而转换到这里，这些分布都是我们已知的。
+而转换到这里，这些分布都是我们已知的，**接下来的内容仍然包含很多数学推导**。
 
 **ps：我们知道一个元素本身就等同于知道他的分布，因为他们都是从一个高斯分布当中采样得到的（当然，根据重参数化技巧，可以转换为从一个标准高斯分布当中采样）**
 
@@ -178,7 +178,7 @@ $$q(x_t)\sim{N(\sqrt{\bar{\alpha_t}}x_{0}, (1-\bar{\alpha_t})\textbf{I})}$$
 
 $$q(x_{t-1})\sim{N(\sqrt{\bar\alpha_{t-1}}x_{0}, (1-\bar\alpha_{t-1})\textbf{I})}$$
 
-ps：这里对于后三个式子，我个人认为写的不是很符合标准，但是大致的意思表示：左边的分布就是右边的高斯分布，两边的均值和方差完全相同（我只是对$\sim$符号的使用存疑）。
+**ps：这里对于后三个式子，我个人认为写的不是很符合标准，但是大致的意思表示：左边的分布就是右边的高斯分布，两边的均值和方差完全相同（我只是对$\sim$符号的使用存疑）。**
 
 而我们此时想将这些高斯分布组合在一起，首先给出高斯分布的表达式（正态分布）：
 
@@ -188,9 +188,96 @@ $$f(x)=\frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(x-\mu)^2}{2\sigma^2}}\propto\exp(-\
 
 $$
 \begin {aligned}
-\frac{q(x_{t},{x_{t-1}})q(x_{t-1})}{q(x_{t})}&\propto\exp(-\frac{1}{2}(\frac{(x_{t}-\sqrt{\alpha_{t}}x_{t-1})^2}{1-\alpha_{t}}+\frac{(x_{t-1}-\sqrt{\bar\alpha_{t-1}}x_{0})^2}{1-\bar\alpha_{t-1}}+\frac{(x_{t}-\sqrt{\bar\alpha_{t}}x_{0})^2}{1-\bar\alpha_{t}})) \\\
-&\propto
+\frac{q(x_{t},{x_{t-1}})q(x_{t-1})}{q(x_{t})}&\propto\exp(-\frac{1}{2}(\frac{(x_{t}-\sqrt{\alpha_{t}}x_{t-1})^2}{1-\alpha_{t}}+\frac{(x_{t-1}-\sqrt{\bar\alpha_{t-1}}x_{0})^2}{1-\bar\alpha_{t-1}}-\frac{(x_{t}-\sqrt{\bar\alpha_{t}}x_{0})^2}{1-\bar\alpha_{t}})) \\\
+&\propto\exp(-\frac{1}{2}((\frac{\alpha_t}{1-\alpha_t}+\frac{1}{1-\bar\alpha_{t-1}})x_{t-1}^2-2(\frac{\sqrt{\alpha_t}x_t}{1-\alpha_t}+\frac{\sqrt{\bar\alpha_{t-1}}x_0}{1-\bar\alpha_{t-1}})x_{t-1}+\frac{x_t^2}{1-\alpha_t}+\frac{\bar\alpha_{t-1}}{1-\bar\alpha_{t-1}}x_0^2-\frac{(x_{t}-\sqrt{\bar\alpha_{t}}x_{0})^2}{1-\bar\alpha_{t}})) \\\
+&\propto\exp(-\frac{1}{2}((\frac{\alpha_t}{\beta_t}+\frac{1}{1-\bar\alpha_{t-1}})x_{t-1}^2-2(\frac{\sqrt{\alpha_t}x_t}{\beta_t}+\frac{\sqrt{\bar\alpha_{t-1}}x_0}{1-\bar\alpha_{t-1}})x_{t-1}+C))
 \end {aligned}
 $$
+
+我们将$x_{t-1}$视为主要变量，从而将原式整理为关于$x_{t-1}$的二次项：
+
+$$
+\begin {aligned}
+\frac{q(x_{t},{x_{t-1}})q(x_{t-1})}{q(x_{t})}&\propto\exp(-\frac{1}{2}(Ax_{t-1}^2+Bx_{t-1}+C)) \\\
+&\propto\exp(-\frac{1}{2}A(x_{t-1}+\frac{B}{2A})^2-\frac{1}{2}(C-\frac{B^2}{4A})) \\\
+&\propto\exp(-\frac{1}{2}A(x_{t-1}+\frac{B}{2A})^2+D)
+\end {aligned}
+\tag{11}
+$$
+
+对于式(11)的$D$部分，由于其在指数部分，可以退化为高斯分布前面的系数，其对于我们研究这个高斯分布本身的均值和方差没有帮助，可以暂时忽略掉。
+
+因此，我们对照正态分布的公式，可以写出这个分布的均值和方差如下所示：
+
+$$\mu=-\frac{B}{2A}$$
+
+$$\sigma^2=\frac{1}{A}$$
+
+而在此之中，我们同样写出$A,B$的表达式如下所示：
+
+$$A=\frac{\alpha_t}{\beta_t}+\frac{1}{1-\bar\alpha_{t-1}}$$
+
+$$B=-2(\frac{\sqrt{\alpha_t}x_t}{\beta_t}+\frac{\sqrt{\bar\alpha_{t-1}}x_0}{1-\bar\alpha_{t-1}})$$
+
+然后，我们对$\mu$和$\sigma$进行简单的推导，如下所示：
+
+$$
+\begin {aligned}
+\sigma^2&=\frac{1}{A} \\\
+&=\frac{1}{\frac{\alpha_t}{\beta_t}+\frac{1}{1-\bar\alpha_{t-1}}} \\\
+&=\frac{\beta_t(1-\bar\alpha_{t-1})}{\beta_t+(1-\bar\alpha_{t-1})\alpha_t} \\\
+&=\beta_t\frac{1-\bar\alpha_{t-1}}{1-\alpha_t+\alpha_t-\bar\alpha_t} \\\
+&=\frac{1-\bar\alpha_{t-1}}{1-\bar\alpha_t}\beta_t
+\end {aligned}
+\tag{12}
+$$
+
+
+$$
+\begin {aligned}
+\mu&=-\frac{B}{2A} \\\
+&=(\frac{\sqrt{\alpha_t}x_t}{\beta_t}+\frac{\sqrt{\bar\alpha_{t-1}}x_0}{1-\bar\alpha_{t-1}})\sigma^2 \\\
+&=(\frac{\sqrt{\alpha_t}x_t}{\beta_t}+\frac{\sqrt{\bar\alpha_{t-1}}x_0}{1-\bar\alpha_{t-1}})\frac{1-\bar\alpha_{t-1}}{1-\bar\alpha_t}\beta_t \\\
+&=\frac{1-\bar\alpha_{t-1}}{1-\bar\alpha_{t}}\sqrt{\alpha_t}x_t+\frac{\sqrt{\bar\alpha_{t-1}}}{1-\bar\alpha_{t}}\beta_t{x_0}
+\end {aligned}
+\tag{13}
+$$
+
+对于式(12)(13)，我们所期望的结果是获得仅仅和$x_t$相关的分布。我们可以看到，(12)表示的方差是一个确定的部分。对于(13)当中出现的$x_0$项，我们可以通过$\tilde{Z}$来写出$x_0$，即公式(8)。所以我们联立式(8)和式(13)：
+
+$$
+\begin{aligned}
+\mu&=\frac{1-\bar\alpha_{t-1}}{1-\bar\alpha_{t}}\sqrt{\alpha_t}x_t+\frac{\sqrt{\bar\alpha_{t-1}}}{1-\bar\alpha_{t}}\frac{\beta_t}{\sqrt{\bar\alpha_t}}(x_t-\sqrt{1-\bar\alpha_t}\tilde{Z}) \\\
+&=\frac{x_t}{\sqrt{\alpha_t}}(\frac{\alpha_t-\bar\alpha_t}{1-\bar\alpha_t}+\frac{\beta_t}{1-\bar\alpha_t})-\frac{\tilde{Z}}{\sqrt{\alpha_t}}\frac{\beta_t}{\sqrt{1-\bar\alpha_t}} \\\
+&=\frac{1}{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\bar\alpha_t}}\tilde{Z})
+\end{aligned}
+\tag{14}
+$$
+
+算到这里，我们需要回顾一下初心，我们想求得的是$q(x_{t-1}\mid{x_t})$这个分布。我们首先通过贝叶斯公式进行转换，然后求得了我们想要的分布的均值(14)和方差(12)，这里我们给出最终的结论。
+
+$$q(x_{t-1}\mid{x_t})\sim{N(\frac{1}{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\bar\alpha_t}}\tilde{Z}),\frac{1-\bar\alpha_{t-1}}{1-\bar\alpha_t}\beta_t)}$$
+
+而根据重采样技术，我们想要求得的$x_{t-1}$就可以写为：
+
+$$x_{t-1}=\frac{1}{\sqrt{\alpha_t}}(x_t-\frac{\beta_t}{\sqrt{1-\bar\alpha_t}}\tilde{Z})+\sqrt{\frac{1-\bar\alpha_{t-1}}{1-\bar\alpha_t}\beta_t}Z \tag{15}$$
+
+而在其中，我们有：
+
+$$\tilde{Z}=UNet(x_t,t)$$
+
+$$Z\sim{N(0,\textbf{I})}$$
+
+经过比较冗杂的推导，我们得到了形如(15)这样的最终目标。最终我们来表示一下reverse的完整过程。
+
+![Desktop View](/assets/img/posts/2022-11-03-diffusion-model/reverse_1.png)
+
+然后我们给出Diffusion Model当中原论文的算法部分，并且可以把它和我们的公式当中的每一项一一对应起来：
+
+![Desktop View](/assets/img/posts/2022-11-03-diffusion-model/algorithm.png)
+
+# Diffusion Language Model
+
+（先暂时归纳到这里，这个部分正在写）
 
 
