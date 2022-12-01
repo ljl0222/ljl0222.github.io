@@ -280,4 +280,30 @@ $$Z\sim{N(0,\textbf{I})}$$
 
 （先暂时归纳到这里，这个部分正在写）
 
-哈哈，根本看不懂
+（上面那个括号写于起码半个月前，没想到懒狗如我到现在具体数学课上太无聊才能继续写论文的内容）
+
+首先要说明的是，时至今日，我仍然看不太懂这个论文的代码。
+
+## 从连续域到离散域
+
+如我们前文所讲的Diffusion Model，我们能够看到，通俗来讲，我们的扩散模型实际上是在一个向量当中逐步添加高斯噪声，最终得到一个趋于完全高斯噪声的向量。而在解码过程当中，我们则是尝试对一个高斯噪声逐步进行去噪，最终产生我们想要的向量（当然这里，无论他是什么样的形式，一个图像或是一个文本）。而这些过程实际上是针对连续域而言：我们可以很自然的将图像视作一个向量，但是其实文本的内容是离散的。
+
+因此我们想要将Diffusion Model应用于文本生成领域，我们需要能够联系起离散域和连续域的工具。文中给出的方法是定义Embedding和Rounding方法，来实现从离散域到连续域和从连续域到离散域之间的转换。
+
+## End to End Training
+
+为了将连续扩散模型应用于离散文本，我们定义了一个嵌入函数$EMB(w_i)$，给出这样的定义$EMB(w)=[EMB(w_1),EMB(w_2),...,EMB(w_n)]\in{R^{nd}}$
+
+在这里，作者貌似尝试使用预训练的Embedding或者随机的高斯分布Embedding，但是发现没有重新End2End训练出来效果要好。
+
+因此，在将扩散模型应用在离散文本当中时，我们添加了一个正向的马尔可夫变换和一个反向的rounding方法。其中正向的Embedding被定义为$q_{\phi}(x_0\mid{w})=\mathcal{N}(EMB(w),\sigma_{0}I)$，反向的Rounding被定义为$p_\theta(w\mid{x_0})=\prod_{i=1}^{n}p_\theta(w_i\mid{x_i}),p_\theta(w_i\mid{x_i})是一个softmax分布$。因此，我们可以将训练函数优化为如下所示：
+
+![Desktop View](/assets/img/posts/2022-11-03-diffusion-model/new_train.png)
+
+## Reducing Rounding Error
+
+我们前文给出了Embedding和Rounding方法，其中，对于Rounding过程，我们想要的是将向量$x_0$还原为文本$w$，但是我们发现，去噪的步骤往往难以直接给出对应到某个单词的$x_0$，我们需要在这个步骤当中做出额外的处理。
+
+首先给出的方法的原理是这样的，由于我们在目标函数当中对于$x_0$的结构建模不够，我们在普通的Diffusion Model当中使用UNet去预测噪声，而我们应该更重视$x_0$的建模，因此新的模型当中直接给出了有关$x_0$的优化。即给出从：$\mathcal{L}_{simple}(x_0)=\sum_{t=1}^{T}\mathbb{E}_{x_t}||\mu_{\theta}(x_t,t)-\hat{\mu}(x_t,x_0)||^2$，到$\mathcal{L}_{x_0-simple}^{e2e}(x_0)=\sum_{t=1}^{T}\mathbb{E}_{x_t}||f_{\theta}(x_t,t)-x_0||^2$。来迫使我们的模型直接去预测$x_0$，从而我们的模型能够明确$x_0$需要精准的位于一个词嵌入的中心。
+
+重新制定目标函数确实有利于模型的训练，但是论文也给出了一个“clamping trick”。在标准的解码过程中，我们实际上是从$x_t$逐步去除高斯噪声，即$x_{t-1}=\sqrt{\bar\alpha}f_\theta(x_t,t)+\sqrt{1-\bar\alpha}\epsilon$，而我们现在给出clamping方法，其实是给出这样的去噪过程：$x_{t-1}=\sqrt{\bar\alpha}Clamp(f_\theta(x_t,t))+\sqrt{1-\bar\alpha}\epsilon$，强迫每一步都将预测的向量集中在词嵌入当中，减少舍入误差。
