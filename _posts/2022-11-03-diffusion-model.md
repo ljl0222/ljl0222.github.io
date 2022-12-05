@@ -304,7 +304,7 @@ $$Z\sim{N(0,\textbf{I})}$$
 
 我们前文给出了Embedding和Rounding方法，其中，对于Rounding过程，我们想要的是将向量$x_0$还原为文本$w$，但是我们发现，去噪的步骤往往难以直接给出对应到某个单词的$x_0$，我们需要在这个步骤当中做出额外的处理。
 
-首先给出的方法的原理是这样的，由于我们在目标函数当中对于$x_0$的结构建模不够，我们在普通的Diffusion Model当中使用UNet去预测噪声，而我们应该更重视$x_0$的建模，因此新的模型当中直接给出了有关$x_0$的优化。即给出从：$\mathcal{L}_{simple}(x_0)=\sum_{t=1}^{T}\mathbb{E}_{x_t}||\mu_{\theta}(x_t,t)-\hat{\mu}(x_t,x_0)||^2$，到$\mathcal{L}_{x_0-simple}^{e2e}(x_0)=\sum_{t=1}^{T}\mathbb{E}_{x_t}||f_{\theta}(x_t,t)-x_0||^2$。来迫使我们的模型直接去预测$x_0$，从而我们的模型能够明确$x_0$需要精准的位于一个词嵌入的中心。
+首先给出的方法的原理是这样的，由于我们在目标函数当中对于$x_0$的结构建模不够，我们在普通的Diffusion Model当中使用UNet去预测噪声，而我们应该更重视$x_0$的建模，因此新的模型当中直接给出了有关$x_0$的优化。即给出从：$\mathcal{L}_{simple}(x_0)=\sum_{t=1}^{T}\mathbb{E}_{x_t}\|\mu_{\theta}(x_t,t)-\hat{\mu}(x_t,x_0)\|^2$，到$\mathcal{L}_{x_0-simple}^{e2e}(x_0)=\sum_{t=1}^{T}\mathbb{E}_{x_t}||f_{\theta}(x_t,t)-x_0||^2$。来迫使我们的模型直接去预测$x_0$，从而我们的模型能够明确$x_0$需要精准的位于一个词嵌入的中心。
 
 重新制定目标函数确实有利于模型的训练，但是论文也给出了一个“clamping trick”。在标准的解码过程中，我们实际上是从$x_t$逐步去除高斯噪声，即$x_{t-1}=\sqrt{\bar\alpha}f_\theta(x_t,t)+\sqrt{1-\bar\alpha}\epsilon$，而我们现在给出clamping方法，其实是给出这样的去噪过程：$x_{t-1}=\sqrt{\bar\alpha}Clamp(f_\theta(x_t,t))+\sqrt{1-\bar\alpha}\epsilon$，强迫每一步都将预测的向量集中在词嵌入当中，减少舍入误差。
 
