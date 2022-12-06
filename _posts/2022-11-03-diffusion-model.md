@@ -3,7 +3,7 @@ title: Diffusion-LM Improves Controllable Text Generation
 author: ljl
 date: 2022-11-03
 categories: [论文阅读, NLP]
-tags: [Transformer, Diffusion-Model]
+tags: [Transformer, Diffusion-Model, Controllable Text Generation]
 math: true
 mermaid: true
 ---
