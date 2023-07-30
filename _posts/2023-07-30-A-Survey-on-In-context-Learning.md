@@ -180,3 +180,5 @@ ps:大家的文章题目都起的这么直白，一眼就懂做的是啥了。
 思路很简单，先选择后排序，根据相似度等方法选择出部分候选demonstration，然后根据已有的demonstration进行排序，值得一提的是，他这里的排序使用了MDL(mininum description length)，利用压缩完的码长决定已有的demonstration的排序。但是可惜我不太会信息论，这个部分没看懂。
 
 ![Desktop View](/assets/img/posts/2023-07-30-A-Survey-on-In-context-Learning/MDL.png)
+
+综述好长，未完待续。
