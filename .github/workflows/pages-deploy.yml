@@ -1,4 +1,5 @@
-name: "Build and deploy"
+下面这段workflow报错：build
+This request has been automatically failed because it uses a deprecated version of actions/upload-artifact: v3. 代码：name: "Build and deploy"
 on:
   push:
     branches:
@@ -28,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           # submodules: true
@@ -53,9 +54,8 @@ jobs:
       - name: Test site
         run: |
           bundle exec htmlproofer _site --disable-external --check-html --allow_hash_href
-
       - name: Upload site artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v2
         with:
           path: "_site${{ steps.pages.outputs.base_path }}"
 
