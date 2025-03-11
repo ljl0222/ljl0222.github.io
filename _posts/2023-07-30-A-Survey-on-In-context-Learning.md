@@ -79,7 +79,7 @@ ICL的优点：
 ![Desktop View](/assets/img/posts/2023-07-30-A-Survey-on-In-context-Learning/symol-tuning.png)
 
 3. Finetuned Language Models are Zero-Shot Learners
-
+Pre-Training to Learn in Context
 提出了指令微调的方法，但是感觉非常玄幻，貌似仅仅通过调整任务的描述这样的指令，来提升模型在特定任务上的表现效果。
 
 核心的思路在于，预训练的时候在多种不同的任务类型上进行指令微调，而在推理过程中即使是没见过的任务类型也能取得很好的效果。这样的训练方法可以提升模型遵守给出的指令的能力，因此即使是对于看不到的指令也能够很好的解决问题。
@@ -91,6 +91,8 @@ ICL的优点：
 #### 自监督的In-context训练
 
 1. Improving In-Context Few-Shot Learning via Self-Supervised Training
+
+出发点：假设了改进ICL学习的一种方法是提升模型对于特定格式的理解能力。
 
 另外写了一篇简单的博客，主要是采用了四种不同的预训练任务，自动的生成训练数据并且进行自监督的训练。针对不同的训练任务，都采用了不同的数据生成方法。四种方法包括下一句预测，短语预测，掩码词语预测以及分类任务。
 
@@ -360,3 +362,5 @@ DPP是一种能get到整体特征的东西，本质上也是选择出较为接�
 #### Scoring Function
 
 这一部分其实是对评估方法上做改进，但是文章很少，也确实没有什么特别有价值的可以直接拿来利用的部分(前面的文章基本也都包含了)，暂且搁置一下。
+
+
