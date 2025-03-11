@@ -1,5 +1,4 @@
-下面这段workflow报错：build
-This request has been automatically failed because it uses a deprecated version of actions/upload-artifact: v3. 代码：name: "Build and deploy"
+name: "Build and deploy"
 on:
   push:
     branches:
